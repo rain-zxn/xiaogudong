@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeFi 交易平台</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .wallet-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .wallet-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .btn-wallet {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-wallet:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .max-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .max-btn:hover {
+            background: #5568d3;
+        }
+
+        .connected {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 DeFi 交易平台</h1>
+
+        <div class="wallet-section">
+            <div class="wallet-buttons">
+                <button class="btn btn-wallet" onclick="connectWallet('okx')">连接 OKX</button>
+                <button class="btn btn-wallet" onclick="connectWallet('tp')">连接 TokenPocket</button>
+                <button class="btn btn-wallet" onclick="connectWallet('bitget')">连接 Bitget</button>
+            </div>
+            <div id="walletStatus" style="margin-top: 15px; font-size: 14px;"></div>
+        </div>
+
+        <div id="statusMessage"></div>
+
+        <div class="section">
+            <div class="section-title">📊 费率信息</div>
+            <div class="info-box">
+                <div class="info-item">
+                    <span class="label">买入费率:</span>
+                    <span class="value" id="buyFeeRate">--</span>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="queryFeeRate()">查询费率</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ 授权 Swap</div>
+            <button class="btn btn-primary" onclick="approveSwap()" id="approveBtn">授权 Swap</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">💱 交易</div>
+            <div class="info-box">
+                <div class="info-item">
+                    <span class="label">DAI 余额:</span>
+                    <span class="value" id="daiBalance">0.00</span>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>DAI 数量</label>
+                <div class="input-wrapper">
+                    <input type="text" id="daiAmount" placeholder="输入 DAI 数量">
+                    <button class="max-btn" onclick="setMaxAmount()">MAX</button>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="executeTrade()" id="tradeBtn">交易</button>
+        </div>
+    </div>
+
+    <script>
+        let provider = null;
+        let signer = null;
+        let userAddress = null;
+        let daiBalance = ethers.BigNumber.from(0);
+
+        const DAI_ADDRESS = '0x83fd06F0846d9D90B3016bF670Efe2E0B11cDe14';
+        const GLGNS_CONTRACT = '0xf140a92C156e76F5A1d3D6f96284b250330F8F4c';
+        const SWAP_CONTRACT = '0x3E412E02B6157fBE80b6C6697f3Ce1142E629019';
+        const PRECISION = 100000;
+
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+            statusDiv.textContent = message;
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = '';
+            }, 5000);
+        }
+
+        async function connectWallet(walletType) {
+            try {
+                let ethereum = null;
+
+                if (walletType === 'okx') {
+                    ethereum = window.okxwallet;
+                } else if (walletType === 'tp') {
+                    ethereum = window.tokenpocket?.ethereum || window.ethereum;
+                } else if (walletType === 'bitget') {
+                    ethereum = window.bitkeep?.ethereum || window.ethereum;
+                }
+
+                if (!ethereum) {
+                    ethereum = window.ethereum;
+                }
+
+                if (!ethereum) {
+                    showStatus(`未检测到 ${walletType.toUpperCase()} 钱包，请安装钱包插件`, true);
+                    return;
+                }
+
+                provider = new ethers.providers.Web3Provider(ethereum);
+                
+                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                userAddress = accounts[0];
+                signer = provider.getSigner();
+
+                document.getElementById('walletStatus').innerHTML = 
+                    `<span class="connected">✓ 已连接: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}</span>`;
+                
+                showStatus('钱包连接成功！');
+                
+                await updateDaiBalance();
+            } catch (error) {
+                console.error('连接钱包失败:', error);
+                showStatus('连接钱包失败: ' + error.message, true);
+            }
+        }
+
+        async function updateDaiBalance() {
+            if (!provider || !userAddress) return;
+
+            try {
+                const daiContract = new ethers.Contract(
+                    DAI_ADDRESS,
+                    ['function balanceOf(address) view returns (uint256)'],
+                    provider
+                );
+
+                daiBalance = await daiContract.balanceOf(userAddress);
+                const balanceFormatted = ethers.utils.formatUnits(daiBalance, 18);
+                document.getElementById('daiBalance').textContent = parseFloat(balanceFormatted).toFixed(4);
+            } catch (error) {
+                console.error('获取 DAI 余额失败:', error);
+            }
+        }
+
+        async function queryFeeRate() {
+            if (!provider) {
+                showStatus('请先连接钱包', true);
+                return;
+            }
+
+            try {
+                const contract = new ethers.Contract(
+                    GLGNS_CONTRACT,
+                    ['function buyfeeRatio() view returns (uint256)'],
+                    provider
+                );
+
+                const feeRatio = await contract.buyfeeRatio();
+                const feePercentage = (feeRatio.toNumber() / PRECISION * 100).toFixed(2);
+                
+                document.getElementById('buyFeeRate').textContent = `${feePercentage}%`;
+                showStatus('费率查询成功！');
+            } catch (error) {
+                console.error('查询费率失败:', error);
+                showStatus('查询费率失败: ' + error.message, true);
+            }
+        }
+
+        async function approveSwap() {
+            if (!signer) {
+                showStatus('请先连接钱包', true);
+                return;
+            }
+
+            try {
+                const approveBtn = document.getElementById('approveBtn');
+                approveBtn.disabled = true;
+                approveBtn.innerHTML = '<span class="loading"></span> 授权中...';
+
+                const tx = await signer.sendTransaction({
+                    to: DAI_ADDRESS,
+                    data: '0x095ea7b30000000000000000000000003e412e02b6157fbe80b6c6697f3ce1142e629019ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+                });
+
+                showStatus('授权交易已发送，等待确认...');
+                await tx.wait();
+                
+                showStatus('授权成功！');
+                approveBtn.disabled = false;
+                approveBtn.textContent = '授权 Swap';
+            } catch (error) {
+                console.error('授权失败:', error);
+                showStatus('授权失败: ' + error.message, true);
+                const approveBtn = document.getElementById('approveBtn');
+                approveBtn.disabled = false;
+                approveBtn.textContent = '授权 Swap';
+            }
+        }
+
+        function setMaxAmount() {
+            if (daiBalance.isZero()) {
+                showStatus('DAI 余额为 0', true);
+                return;
+            }
+
+            const minReserve = ethers.utils.parseUnits('0.1', 18);
+            
+            if (daiBalance.lte(minReserve)) {
+                showStatus('DAI 不足', true);
+                return;
+            }
+
+            const maxAmount = daiBalance.sub(minReserve);
+            const maxFormatted = ethers.utils.formatUnits(maxAmount, 18);
+            document.getElementById('daiAmount').value = maxFormatted;
+        }
+
+        async function executeTrade() {
+            if (!signer || !userAddress) {
+                showStatus('请先连接钱包', true);
+                return;
+            }
+
+            const amountInput = document.getElementById('daiAmount').value;
+            if (!amountInput || parseFloat(amountInput) <= 0) {
+                showStatus('请输入有效的 DAI 数量', true);
+                return;
+            }
+
+            try {
+                const amount = ethers.utils.parseUnits(amountInput, 18);
+                const minReserve = ethers.utils.parseUnits('0.1', 18);
+
+                if (daiBalance.sub(amount).lt(minReserve)) {
+                    showStatus('DAI 不足', true);
+                    return;
+                }
+
+                const timestamp = Math.floor(Date.now() / 1000) + 600;
+
+                const txData = '0x5c11d795' +
+                    amount.toHexString().slice(2).padStart(64, '0') +
+                    '0000000000000000000000000000000000000000000000000000000000000000' +
+                    '00000000000000000000000000000000000000000000000000000000000000a0' +
+                    userAddress.slice(2).toLowerCase().padStart(64, '0') +
+                    timestamp.toString(16).padStart(64, '0') +
+                    '0000000000000000000000000000000000000000000000000000000000000002' +
+                    '00000000000000000000000083fd06f0846d9d90b3016bf670efe2e0b11cde14' +
+                    '000000000000000000000000f140a92c156e76f5a1d3d6f96284b250330f8f4c';
+
+                const confirmed = confirm(
+                    `确认交易信息:\n\n` +
+                    `DAI 数量: ${amountInput}\n` +
+                    `接收地址: ${SWAP_CONTRACT}\n` +
+                    `钱包地址: ${userAddress}\n\n` +
+                    `是否确认发送交易？`
+                );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                const tradeBtn = document.getElementById('tradeBtn');
+                tradeBtn.disabled = true;
+                tradeBtn.innerHTML = '<span class="loading"></span> 交易中...';
+
+                const tx = await signer.sendTransaction({
+                    to: SWAP_CONTRACT,
+                    data: txData
+                });
+
+                showStatus('交易已发送，等待确认...');
+                await tx.wait();
+                
+                showStatus('交易成功！');
+                await updateDaiBalance();
+                document.getElementById('daiAmount').value = '';
+                
+                tradeBtn.disabled = false;
+                tradeBtn.textContent = '交易';
+            } catch (error) {
+                console.error('交易失败:', error);
+                showStatus('交易失败: ' + error.message, true);
+                const tradeBtn = document.getElementById('tradeBtn');
+                tradeBtn.disabled = false;
+                tradeBtn.textContent = '交易';
+            }
+        }
+    </script>
+</body>
+</html>
