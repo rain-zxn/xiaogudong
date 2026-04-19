@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeFi 交易平台</title>
+    <title>小股东牛逼</title>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <style>
         * {
@@ -235,7 +235,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 DeFi 交易平台</h1>
+        <h1>🚀 小股东牛逼</h1>
 
         <div class="wallet-section">
             <div class="wallet-buttons">
@@ -260,7 +260,7 @@
         </div>
 
         <div class="section">
-            <div class="section-title">✅ 授权 Swap</div>
+            <div class="section-title">✅ 交易前先授权 Swap</div>
             <button class="btn btn-primary" onclick="approveSwap()" id="approveBtn">授权 Swap</button>
         </div>
 
@@ -273,7 +273,7 @@
                 </div>
             </div>
             <div class="input-group">
-                <label>DAI 数量</label>
+                <label>DAI 数量(保留0.1DAI)</label>
                 <div class="input-wrapper">
                     <input type="text" id="daiAmount" placeholder="输入 DAI 数量">
                     <button class="max-btn" onclick="setMaxAmount()">MAX</button>
@@ -368,13 +368,22 @@
             }
 
             try {
-                const contract = new ethers.Contract(
-                    GLGNS_CONTRACT,
-                    ['function buyfeeRatio() view returns (uint256)'],
-                    provider
-                );
+                const network = await provider.getNetwork();
+                console.log('当前网络:', network);
 
-                const feeRatio = await contract.buyfeeRatio();
+                const result = await provider.call({
+                    to: GLGNS_CONTRACT,
+                    data: '0xbffad1ad'
+                });
+
+                console.log('查询结果:', result);
+
+                if (!result || result === '0x' || result === '0x0') {
+                    showStatus('合约返回空值，请检查网络和合约地址', true);
+                    return;
+                }
+
+                const feeRatio = ethers.BigNumber.from(result);
                 const feePercentage = (feeRatio.toNumber() / PRECISION * 100).toFixed(2);
                 
                 document.getElementById('buyFeeRate').textContent = `${feePercentage}%`;
@@ -470,7 +479,7 @@
                 const confirmed = confirm(
                     `确认交易信息:\n\n` +
                     `DAI 数量: ${amountInput}\n` +
-                    `接收地址: ${SWAP_CONTRACT}\n` +
+                    `swap合约地址: ${SWAP_CONTRACT}\n` +
                     `钱包地址: ${userAddress}\n\n` +
                     `是否确认发送交易？`
                 );
