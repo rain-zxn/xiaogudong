@@ -103,7 +103,6 @@ async function switchToAnubis() {
   try {
     await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1a3a' }] });
     showStatus('已切换到 Anubis 链');
-    return true;
   } catch (err) {
     if (err.code === 4902) {
       try {
@@ -117,7 +116,13 @@ async function switchToAnubis() {
             blockExplorerUrls: ['https://browser.anubispace.org']
           }]
         });
-        return true;
+        try {
+          await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1a3a' }] });
+          showStatus('已切换到 Anubis 链');
+        } catch (e2) {
+          showStatus('已添加 Anubis 网络，请手动切换到该网络', true);
+          return false;
+        }
       } catch (e) {
         showStatus('添加网络失败:' + e.message, true);
         return false;
@@ -127,20 +132,40 @@ async function switchToAnubis() {
       return false;
     }
   }
+  walletProvider = new ethers.providers.Web3Provider(ethereum, 'any');
+  signer = walletProvider.getSigner();
+  return true;
+}
+
+function getProvider(walletType) {
+  if (walletType === 'okx') {
+    if (window.okxwallet && window.okxwallet.ethereum) return window.okxwallet.ethereum;
+    if (window.okxwallet) return window.okxwallet;
+    if (window.ethereum) {
+      if (window.ethereum.isOKX || window.ethereum.isOKEx || window.ethereum.isOkxWallet) return window.ethereum;
+      if (window.ethereum.providers) {
+        for (let i = 0; i < window.ethereum.providers.length; i++) {
+          const p = window.ethereum.providers[i];
+          if (p.isOKX || p.isOKEx || p.isOkxWallet || p === window.okxwallet) return p;
+        }
+      }
+    }
+    return window.ethereum;
+  }
+  if (walletType === 'tp') {
+    return (window.tokenpocket && window.tokenpocket.ethereum) || window.tokenpocket ||
+           (window.tokenPocket && window.tokenPocket.ethereum) || window.tokenPocket || window.ethereum;
+  }
+  if (walletType === 'bitget') {
+    return (window.bitkeep && window.bitkeep.ethereum) || window.bitkeep ||
+           (window.bitget && window.bitget.ethereum) || window.bitget || window.ethereum;
+  }
+  return window.ethereum;
 }
 
 async function connectWallet(walletType) {
   try {
-    if (walletType === 'okx') {
-      ethereum = window.okxwallet || window.okexchain;
-    } else if (walletType === 'tp') {
-      ethereum = window.tokenpocket?.ethereum || window.tokenPocket?.ethereum || window.ethereum;
-    } else if (walletType === 'bitget') {
-      ethereum = window.bitkeep?.ethereum || window.bitget?.ethereum || window.ethereum;
-    }
-    if (!ethereum) {
-      ethereum = window.ethereum;
-    }
+    ethereum = getProvider(walletType);
     if (!ethereum) {
       showStatus('未检测到 ' + walletType.toUpperCase() + ' 钱包，请安装钱包插件', true);
       return;
@@ -155,6 +180,22 @@ async function connectWallet(walletType) {
   } catch (error) {
     console.error(error);
     showStatus('连接钱包失败:' + error.message, true);
+  }
+}
+
+async function ensureAnubis() {
+  if (!walletProvider) {
+    showStatus('请先连接钱包', true);
+    return false;
+  }
+  try {
+    const network = await walletProvider.getNetwork();
+    if (network.chainId === 6714) return true;
+    showStatus('当前不是 Anubis 链，请先点击“切换到 Anubis 链”', true);
+    return false;
+  } catch (error) {
+    showStatus('检查网络失败:' + error.message, true);
+    return false;
   }
 }
 
@@ -174,7 +215,7 @@ async function approveSwap() {
     showStatus('请先连接钱包', true);
     return;
   }
-  if (!await switchToAnubis()) return;
+  if (!await ensureAnubis()) return;
   const btn = document.getElementById('approveBtn');
   btn.disabled = true;
   btn.textContent = '授权中...';
@@ -227,7 +268,7 @@ async function executeTrade() {
     showStatus('请先连接钱包', true);
     return;
   }
-  if (!await switchToAnubis()) return;
+  if (!await ensureAnubis()) return;
   const amountInput = document.getElementById('lgnsAmount').value;
   if (!amountInput || isNaN(parseFloat(amountInput)) || parseFloat(amountInput) <= 0) {
     showStatus('请输入有效的 LGNS 数量', true);
